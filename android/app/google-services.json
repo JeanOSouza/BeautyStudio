@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "72159179870",
+    "project_id": "beautystudio-63af9",
+    "storage_bucket": "beautystudio-63af9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:72159179870:android:a97c39df149ddd3daeb0cf",
+        "android_client_info": {
+          "package_name": "com.example.beauty"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzZPFxlk4Pp785KIEeUE9t_eDsagthIAI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:72159179870:android:338425a4b11d58acaeb0cf",
+        "android_client_info": {
+          "package_name": "com.example.beautystudio"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzZPFxlk4Pp785KIEeUE9t_eDsagthIAI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
