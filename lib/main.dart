@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';  // FireBase autentication
-import 'screens/login.dart'; // Importe a tela
+import 'screens/tela_adcao_servico.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp(); // inicializa o Firebase
-    runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(const MyApp());
+
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Roda o aplicativo Flutter.
   runApp(const MyApp());
 }
 
@@ -17,7 +22,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'App com Login',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const LoginScreen(), // Tela inicial = Login
+      home:
+          const ServiceFormScreen(), // A tela inicial continua sendo a LoginScreen
     );
   }
 }
