@@ -1,355 +1,302 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart'; // Import for Firebase.initiali
+import 'tela_servicos_profissional.dart';
 
-void main() {
-  runApp(const BeautyStudioApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase
+  runApp(const MyApp());
 }
 
-class BeautyStudioApp extends StatelessWidget {
-  const BeautyStudioApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Beauty Studio',
       theme: ThemeData(
-        brightness: Brightness.dark, // Tema escuro
-        primarySwatch: Colors.deepPurple, // Cor primária para alguns widgets
-        scaffoldBackgroundColor: const Color(
-          0xFF1A002A,
-        ), // Fundo quase preto/roxo escuro
-        cardColor: const Color(0xFF2E004A), // Cor dos cards
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.white),
-          bodyMedium: TextStyle(color: Colors.white70),
-          titleLarge: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent, // AppBar transparente
-          elevation: 0, // Sem sombra na AppBar
-          foregroundColor: Colors.white, // Cor dos ícones e texto da AppBar
-        ),
-        // Adicione outras customizações de tema conforme necessário
+        primarySwatch: Colors.deepPurple,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const ShoppingCartScreen(),
+      home: const LoginScreen(),
     );
   }
 }
 
-class ShoppingCartScreen extends StatefulWidget {
-  const ShoppingCartScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<ShoppingCartScreen> createState() => _ShoppingCartScreenState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
-  // Variáveis de estado para as opções de pagamento
-  String? _selectedPaymentOption =
-      'pay_all_now'; // 'pay_50_percent' ou 'pay_all_now'
-  String? _selectedPaymentMethod = 'pix'; // 'credit_card' ou 'pix'
+class _LoginScreenState extends State<LoginScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  String? _errorMessage;
 
-  // Variáveis de estado para o item do carrinho (simplificado)
-  int _itemQuantity = 1;
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    setState(() {
+      _errorMessage = null;
+    });
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      // Navegar para a tela de serviços após login bem-sucedido
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ListaServicosScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      String message;
+      if (e.code == 'user-not-found') {
+        message = 'Nenhum usuário encontrado para esse e-mail.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Senha incorreta para esse e-mail.';
+      } else if (e.code == 'invalid-email') {
+        message = 'O formato do e-mail é inválido.';
+      } else if (e.code == 'too-many-requests') {
+        message = 'Muitas tentativas de login. Tente novamente mais tarde.';
+      } else {
+        message = 'Erro ao fazer login: ${e.message}';
+      }
+      setState(() {
+        _errorMessage = message;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ocorreu um erro inesperado: $e';
+      });
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    if (_emailController.text.isEmpty) {
+      setState(() {
+        _errorMessage = 'Por favor, digite seu e-mail para redefinir a senha.';
+      });
+      return;
+    }
+    try {
+      await _auth.sendPasswordResetEmail(email: _emailController.text.trim());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Link de redefinição de senha enviado para o seu e-mail!',
+          ),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      String message;
+      if (e.code == 'user-not-found') {
+        message = 'Não há usuário com esse e-mail.';
+      } else if (e.code == 'invalid-email') {
+        message = 'O formato do e-mail é inválido.';
+      } else {
+        message = 'Erro ao redefinir senha: ${e.message}';
+      }
+      setState(() {
+        _errorMessage = message;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ocorreu um erro inesperado: $e';
+      });
+    }
+  }
+
+  Future<void> _createAccount() async {
+    setState(() {
+      _errorMessage = null;
+    });
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Conta criada com sucesso! Você já está logado.'),
+        ),
+      );
+      // Optionally navigate to home screen
+      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+    } on FirebaseAuthException catch (e) {
+      String message;
+      if (e.code == 'weak-password') {
+        message = 'A senha fornecida é muito fraca.';
+      } else if (e.code == 'email-already-in-use') {
+        message = 'Já existe uma conta com este e-mail.';
+      } else if (e.code == 'invalid-email') {
+        message = 'O formato do e-mail é inválido.';
+      } else {
+        message = 'Erro ao criar conta: ${e.message}';
+      }
+      setState(() {
+        _errorMessage = message;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ocorreu um erro inesperado: $e';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () {
-            // Ação ao pressionar o botão de voltar
-          },
-        ),
-        title: const Text(
-          'BeautyStudio',
-          style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_horiz), // Ou Icons.menu
-            onPressed: () {
-              // Ação para o menu de mais opções
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Campo de busca "Meu carrinho" (opcional, como na imagem)
-            // if (false) // Descomente para exibir
-            //   Padding(
-            //     padding: const EdgeInsets.only(bottom: 16.0),
-            //     child: TextField(
-            //       decoration: InputDecoration(
-            //         hintText: 'Meu carrinho...',
-            //         prefixIcon: Icon(Icons.search, color: Colors.white70),
-            //         border: OutlineInputBorder(
-            //           borderRadius: BorderRadius.circular(10.0),
-            //           borderSide: BorderSide.none,
-            //         ),
-            //         filled: true,
-            //         fillColor: Theme.of(context).cardColor,
-            //       ),
-            //     ),
-            //   ),
-
-            // Item do Carrinho (Banho de Gel)
-            _buildCartItem(context),
-            const SizedBox(height: 20),
-
-            // Subtotal
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Subtotal:',
-                  style: Theme.of(context).textTheme.bodyMedium,
+      backgroundColor: const Color(
+        0xFF1A0033,
+      ), // Dark purple background based on image
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              // Butterfly Logo
+              Image.asset(
+                'lib/img/Logo.png', // Make sure you have this image in your assets folder
+                height: 120,
+              ),
+              const SizedBox(height: 20),
+              // Beauty Studio Text
+              const Text(
+                'Beauty',
+                style: TextStyle(
+                  fontFamily:
+                      'Montserrat', // You might need to add this font to your project
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                Text(
-                  'R\$ 30,00',
-                  style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const Text(
+                'Studio',
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 40,
+                  color: Colors.white,
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Opções de Pagamento
-            Text('Pagamento:', style: Theme.of(context).textTheme.bodyLarge),
-            RadioListTile<String>(
-              title: const Text('Pagar 50% agora e o restante depois'),
-              value: 'pay_50_percent',
-              groupValue: _selectedPaymentOption,
-              onChanged: (value) {
-                setState(() {
-                  _selectedPaymentOption = value;
-                });
-              },
-              activeColor: Colors.deepPurpleAccent,
-            ),
-            RadioListTile<String>(
-              title: const Text('Pagar tudo agora'),
-              value: 'pay_all_now',
-              groupValue: _selectedPaymentOption,
-              onChanged: (value) {
-                setState(() {
-                  _selectedPaymentOption = value;
-                });
-              },
-              activeColor: Colors.deepPurpleAccent,
-            ),
-            const SizedBox(height: 20),
-
-            // Forma de Pagamento
-            Text(
-              'Forma de Pagamento:',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            RadioListTile<String>(
-              title: const Text('Cartão de Crédito'),
-              subtitle: const Text('Parcelamento'),
-              value: 'credit_card',
-              groupValue: _selectedPaymentMethod,
-              onChanged: (value) {
-                setState(() {
-                  _selectedPaymentMethod = value;
-                });
-              },
-              activeColor: Colors.deepPurpleAccent,
-            ),
-            RadioListTile<String>(
-              title: const Text('Pix'),
-              value: 'pix',
-              groupValue: _selectedPaymentMethod,
-              onChanged: (value) {
-                setState(() {
-                  _selectedPaymentMethod = value;
-                });
-              },
-              activeColor: Colors.deepPurpleAccent,
-            ),
-            const SizedBox(height: 20),
-
-            // Total
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Total:', style: Theme.of(context).textTheme.titleLarge),
-                Text(
-                  'R\$ 90,00', // Assumindo este é o valor final da imagem
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(color: Colors.white),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
-
-            // Botão Finalizar Compra
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Lógica para finalizar a compra
-                  print('Finalizar Compra Clicado!');
-                  print('Opção de Pagamento: $_selectedPaymentOption');
-                  print('Método de Pagamento: $_selectedPaymentMethod');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple, // Cor do botão
-                  padding: const EdgeInsets.symmetric(vertical: 15.0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+              ),
+              const SizedBox(height: 50),
+              // Email Input
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Email de Login',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                    borderSide: BorderSide.none,
                   ),
+                  prefixIcon: const Icon(Icons.email, color: Colors.white),
                 ),
-                child: const Text(
-                  'Finalizar Compra',
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+              ),
+              const SizedBox(height: 16),
+              // Password Input
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Senha',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  prefixIcon: const Icon(Icons.lock, color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Forgot Password
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _forgotPassword,
+                  child: const Text(
+                    'Esqueceu a senha? Clique Aqui.',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Theme.of(context).cardColor,
-        selectedItemColor: Colors.deepPurpleAccent,
-        unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType
-            .fixed, // Garante que todos os itens apareçam igualmente
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: '', // Deixe vazio para não mostrar texto
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ''),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite), // Ou outro ícone como perfil
-            label: '',
-          ),
-        ],
-        onTap: (index) {
-          // Lógica para navegar entre as telas
-          print('Bottom bar item $index tapped');
-        },
-      ),
-    );
-  }
-
-  Widget _buildCartItem(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero, // Remove margem padrão do Card
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
-      elevation: 0, // Sem sombra
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Imagem do produto
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10.0),
-                image: const DecorationImage(
-                  image: AssetImage(
-                    'assets/gel_nails.png',
-                  ), // Substitua pela sua imagem
-                  fit: BoxFit.cover,
+              const SizedBox(height: 24),
+              // Login Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(
+                      0xFFFEE68C,
+                    ), // Gold-like color from image
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                  ),
+                  child: const Text(
+                    'Entrar',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-                color: Colors.grey[700], // Placeholder se a imagem não carregar
               ),
-              child: const Icon(
-                Icons.camera_alt,
-                color: Colors.white70,
-              ), // Ícone placeholder
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 16),
+              // Error Message
+              if (_errorMessage != null)
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              const SizedBox(height: 24),
+              // Create Account
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'Banho de Gel - Aplicação',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(fontSize: 18),
+                  const Text(
+                    'Não tem uma conta?',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'R\$ 30,00',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyLarge?.copyWith(color: Colors.greenAccent),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'Data: 28/06/2025',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  Text(
-                    'Horário: 15 horas',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  TextButton(
+                    onPressed: _createAccount,
+                    child: const Text(
+                      'Crie uma conta.',
+                      style: TextStyle(
+                        color: Color(0xFFFEE68C), // Gold-like color
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-            // Quantidade e botão de remover
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.remove_circle_outline,
-                        color: Colors.white70,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          if (_itemQuantity > 1) _itemQuantity--;
-                        });
-                      },
-                    ),
-                    Text(
-                      '$_itemQuantity',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.add_circle_outline,
-                        color: Colors.white70,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _itemQuantity++;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.redAccent),
-                  onPressed: () {
-                    // Lógica para remover o item do carrinho
-                    print('Remover item clicado');
-                  },
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

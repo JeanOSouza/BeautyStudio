@@ -1,3 +1,6 @@
+import 'dart:io'; // Para manipular arquivos locais (imagens)
+import 'package:image_picker/image_picker.dart'; // Para pegar imagem da galeria/câmera
+import 'package:firebase_storage/firebase_storage.dart'; // Para upload no Firebase Storage
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -9,19 +12,17 @@ class ServiceFormScreen extends StatefulWidget {
 }
 
 class _ServiceFormScreenState extends State<ServiceFormScreen> {
-  // Controladores para os campos de texto
+  // Variáveis
+  File? _selectedImage;
   final TextEditingController _serviceNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _valueController = TextEditingController();
   final TextEditingController _userCommentController = TextEditingController();
-
-  // Lista para armazenar os caminhos das imagens selecionadas
-  // Em um app real, aqui seriam objetos de imagem ou URLs
   final List<String> _imagePaths = [];
 
   @override
   void dispose() {
-    // É importante liberar os controladores quando o widget for descartado
+    // Libera os controladores para evitar vazamento de memória
     _serviceNameController.dispose();
     _descriptionController.dispose();
     _valueController.dispose();
@@ -29,31 +30,50 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
     super.dispose();
   }
 
-  // --- Lógica de Adicionar Imagem (Exemplo - precisaria de um pacote como image_picker) ---
-  void _addImage() {
-    // Implementar a lógica para abrir a galeria/câmera e selecionar uma imagem.
-    // Ex: usando o pacote image_picker
-    // ImagePicker().pickImage(source: ImageSource.gallery).then((file) {
-    //   if (file != null) {
-    //     setState(() {
-    //       _imagePaths.add(file.path); // Adiciona o caminho da imagem
-    //     });
-    //   }
-    // });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Lógica para adicionar imagem aqui (ex: image_picker)'),
-      ),
+  // Função para abrir a galeria, selecionar imagem e fazer upload para Firebase Storage
+  void _addImage() async {
+    final ImagePicker picker = ImagePicker();
+
+    // Abre a galeria e espera o usuário escolher uma imagem
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
     );
-    // Adicionando um placeholder para demonstração
-    setState(() {
-      _imagePaths.add(
-        'assets/placeholder_image.png',
-      ); // Adicione uma imagem de placeholder em assets/
-    });
+
+    if (pickedFile != null) {
+      // Converte XFile em File para manipulação local
+      File imageFile = File(pickedFile.path);
+
+      setState(() {
+        _selectedImage =
+            imageFile; // Guarda temporariamente para exibir, se quiser
+      });
+
+      // Cria um nome único para o arquivo usando timestamp
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Referência para o arquivo dentro do Firebase Storage (pasta 'service_images')
+      Reference storageRef = FirebaseStorage.instance.ref().child(
+        'service_images/$fileName.jpg',
+      );
+
+      // Inicia o upload do arquivo
+      UploadTask uploadTask = storageRef.putFile(imageFile);
+
+      // Espera o upload finalizar e pega o snapshot
+      TaskSnapshot snapshot = await uploadTask;
+
+      // Obtém a URL pública da imagem uploadada para salvar no Firestore
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      setState(() {
+        _imagePaths.add(
+          downloadUrl,
+        ); // Adiciona a URL da imagem na lista para mostrar e salvar
+      });
+    }
   }
 
-  // --- Lógica de Salvar o Serviço ---
+  // Função para salvar o serviço no Firestore, incluindo as URLs das imagens
   void _saveService() async {
     final serviceName = _serviceNameController.text.trim();
     final description = _descriptionController.text.trim();
@@ -77,7 +97,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
         'description': description,
         'value': double.tryParse(value) ?? 0.0,
         'userComment': userComment,
-        'images': _imagePaths, // Se for URL das imagens, envie aqui
+        'images': _imagePaths, // Aqui salvamos as URLs das imagens uploadadas
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -92,6 +112,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
       _userCommentController.clear();
       setState(() {
         _imagePaths.clear();
+        _selectedImage = null;
       });
     } catch (e) {
       ScaffoldMessenger.of(
@@ -104,66 +125,67 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Adicionar Serviço'),
-        backgroundColor:
-            Colors.pinkAccent, // Cor da AppBar para o tema do salão
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset('lib/img/Logo.png'),
+        ),
+        title: const Text('Novo Serviço'),
+        backgroundColor: Colors.purple,
       ),
-      // Adicionamos um SingleChildScrollView para garantir que o teclado não cubra os campos
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0), // Padding em todos os lados
+        padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment
-              .stretch, // Estica os elementos para a largura total
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- Campo: Nome do Serviço ---
+            // Campo: Nome do Serviço
             TextField(
               controller: _serviceNameController,
               decoration: const InputDecoration(
                 labelText: 'Nome do Serviço',
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.palette), // Ícone sugestivo
+                prefixIcon: Icon(Icons.palette),
               ),
             ),
             const SizedBox(height: 15),
 
-            // --- Campo: Descrição do Serviço ---
+            // Campo: Descrição do Serviço
             TextField(
               controller: _descriptionController,
               decoration: const InputDecoration(
                 labelText: 'Descrição Detalhada',
                 border: OutlineInputBorder(),
-                alignLabelWithHint:
-                    true, // Alinha o label no topo para múltiplos TextFields
+                alignLabelWithHint: true,
                 prefixIcon: Icon(Icons.description),
               ),
-              maxLines: 4, // Permite múltiplas linhas
+              maxLines: 4,
               keyboardType: TextInputType.multiline,
             ),
             const SizedBox(height: 15),
 
-            // --- Campo: Valor do Serviço ---
+            // Campo: Valor do Serviço
             TextField(
               controller: _valueController,
               decoration: const InputDecoration(
                 labelText: 'Valor (Ex: 150.00)',
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.attach_money), // Ícone de dinheiro
+                prefixIcon: Icon(Icons.attach_money),
               ),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
-              ), // Teclado numérico
+              ),
             ),
             const SizedBox(height: 25),
 
-            // --- Galeria de Imagens ---
+            // Texto da Galeria de Imagens
             const Text(
               'Galeria de Imagens do Serviço',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            // Linha para o botão "Adicionar Imagem"
+
+            // Botão para adicionar imagem, chama a função _addImage()
             Align(
-              // Centraliza o botão
               alignment: Alignment.centerLeft,
               child: OutlinedButton.icon(
                 onPressed: _addImage,
@@ -181,16 +203,16 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            // Grade/Wrap para exibir as imagens selecionadas
+
+            // Área para mostrar as imagens selecionadas (exibindo a partir das URLs)
             _imagePaths.isEmpty
                 ? const Text(
                     'Nenhuma imagem adicionada ainda.',
                     style: TextStyle(fontStyle: FontStyle.italic),
                   )
                 : Wrap(
-                    spacing: 8.0, // Espaçamento horizontal entre as imagens
-                    runSpacing:
-                        8.0, // Espaçamento vertical entre as linhas de imagens
+                    spacing: 8.0,
+                    runSpacing: 8.0,
                     children: _imagePaths.map((path) {
                       return Stack(
                         children: [
@@ -200,13 +222,10 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.grey),
                               borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: AssetImage(
-                                  path,
-                                ), // Use NetworkImage para URLs reais
-                                fit: BoxFit.cover,
-                              ),
                             ),
+                            child: path.startsWith('http')
+                                ? Image.network(path, fit: BoxFit.cover)
+                                : Image.asset(path, fit: BoxFit.cover),
                           ),
                           Positioned(
                             right: 0,
@@ -214,9 +233,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
                             child: GestureDetector(
                               onTap: () {
                                 setState(() {
-                                  _imagePaths.remove(
-                                    path,
-                                  ); // Remove a imagem da lista
+                                  _imagePaths.remove(path);
                                 });
                               },
                               child: const CircleAvatar(
@@ -234,9 +251,10 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
                       );
                     }).toList(),
                   ),
+
             const SizedBox(height: 25),
 
-            // --- Campo: Comentário para o Usuário ---
+            // Campo: Comentário para o Usuário
             TextField(
               controller: _userCommentController,
               decoration: const InputDecoration(
@@ -246,12 +264,12 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
                 alignLabelWithHint: true,
                 prefixIcon: Icon(Icons.comment),
               ),
-              maxLines: 3, // Permite múltiplas linhas para o comentário
+              maxLines: 3,
               keyboardType: TextInputType.multiline,
             ),
             const SizedBox(height: 30),
 
-            // --- Botão Salvar Serviço ---
+            // Botão para salvar serviço
             ElevatedButton.icon(
               onPressed: _saveService,
               icon: const Icon(Icons.save),
@@ -260,8 +278,8 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
                 style: TextStyle(fontSize: 18),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pinkAccent, // Cor do botão
-                foregroundColor: Colors.white, // Cor do texto/ícone
+                backgroundColor: Colors.pinkAccent,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
