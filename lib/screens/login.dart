@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart'; // Import for Firebase.initiali
 import 'tela_servicos_profissional.dart';
+import 'tela_cadastro.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -169,11 +170,12 @@ class _LoginScreenState extends State<LoginScreen> {
             children: <Widget>[
               // Butterfly Logo
               Image.asset(
-                'lib/img/Logo.png', // Make sure you have this image in your assets folder
+                'lib/img/Logo.png', //imagem
                 height: 120,
               ),
               const SizedBox(height: 20),
-              // Beauty Studio Text
+
+              // Beauty Studio Text  para alterar
               const Text(
                 'Beauty',
                 style: TextStyle(
