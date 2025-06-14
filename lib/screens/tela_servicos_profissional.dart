@@ -1,3 +1,4 @@
+import 'package:beautystudio/screens/agendamentos_recebidos.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart'; // Adicione este import para Firebase Storage
@@ -6,6 +7,7 @@ import 'package:beautystudio/cores/cores.dart'; // cores
 import 'disponibilidade_servico.dart';
 import 'perfil.dart';
 import 'package:beautystudio/models/service.dart'; // <--- IMPORTE SEU MODELO DE SERVIÇO AQUI
+import 'agendamentos_recebidos.dart';
 
 class ListaServicosScreen extends StatefulWidget {
   const ListaServicosScreen({super.key});
@@ -83,6 +85,18 @@ class _ListaServicosScreenState extends State<ListaServicosScreen> {
                   MaterialPageRoute(
                     builder: (context) =>
                         const ServiceFormScreen(), // Para adicionar um novo serviço
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.view_agenda),
+              title: const Text('Agendamentos concluidos'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  MaterialPageRoute(
+                    builder: (context) => const AgendamentosRecebidosScreen(),
                   ),
                 );
               },
