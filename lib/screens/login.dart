@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart'; // Import for Firebase.initiali
+import 'package:firebase_core/firebase_core.dart';
 import 'tela_servicos_profissional.dart';
 import 'tela_cadastro.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Initialize Firebase
+  await Firebase.initializeApp(); // Firebase
   runApp(const MyApp());
 }
 

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Importe o Firestore
-import 'login.dart'; // Certifique-se de que este caminho está correto
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'login.dart';
+import 'tela_servicos_profissional.dart';
 
 class UserRegisterScreen extends StatefulWidget {
+  const UserRegisterScreen({super.key});
+
   @override
   _UserRegisterScreenState createState() => _UserRegisterScreenState();
 }
@@ -12,8 +15,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  final _phoneController =
-      TextEditingController(); // Novo controlador para telefone
+  final _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   Future<void> _registerUser() async {
@@ -22,14 +24,13 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
       try {
         UserCredential userCredential = await FirebaseAuth.instance
             .createUserWithEmailAndPassword(
-              // Método correto do Firebase Auth
               email: _emailController.text.trim(),
               password: _passwordController.text.trim(),
             );
 
         // Se o registro no Firebase Auth for bem-sucedido, salve os dados adicionais no Firestore
         if (userCredential.user != null) {
-          // Atualiza o display name no Firebase Auth (opcional, mas boa prática)
+          // Opcional, mas boa prática: atualiza o display name no Firebase Auth
           await userCredential.user!.updateDisplayName(
             _nameController.text.trim(),
           );
@@ -40,27 +41,37 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
               .collection('users')
               .doc(userCredential.user!.uid)
               .set({
-                'firstName': _nameController.text.trim(),
+                'fullName': _nameController.text.trim(), // Nome completo
                 'phone': _phoneController.text.trim(),
-                'email': _emailController.text
-                    .trim(), // Salvar o email também no Firestore
-                'createdAt':
-                    FieldValue.serverTimestamp(), // Adiciona um timestamp de criação
+                'email': _emailController.text.trim(),
+                'createdAt': FieldValue.serverTimestamp(),
               });
 
           print('Usuário registrado com sucesso: ${userCredential.user!.uid}');
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cadastro realizado com sucesso!')),
-          );
+          // Verificado: Bloco 'if (mounted)' e navegação
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+            );
 
-          // Navega para a tela de login após o cadastro bem-sucedido
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => LoginScreen(),
-            ), // Substitua 'LoginScreen' pelo nome real da sua classe de login
-          );
+            // Escolha o fluxo de navegação que faz sentido para seu app
+            // Opção 1: Ir para a tela de serviços após o cadastro
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    const ListaServicosScreen(), // Redireciona para sua tela principal
+              ),
+            );
+            // Opção 2: Ir de volta para a tela de Login (se você quer que o usuário faça login após o cadastro)
+            // Navigator.pushReplacement(
+            //   context,
+            //   MaterialPageRoute(
+            //     builder: (context) => LoginScreen(),
+            //   ),
+            // );
+          }
         }
       } on FirebaseAuthException catch (e) {
         String message;
@@ -69,31 +80,33 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
         } else if (e.code == 'email-already-in-use') {
           message = 'Este e-mail já está em uso.';
         } else {
-          message = 'Erro ao registrar: ${e.message}';
+          message = 'Erro ao registrar: ${e.message ?? "Erro desconhecido"}';
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-        print('Erro ao registrar: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
+        }
+        print('Erro ao registrar: $e'); // Para depuração
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ocorreu um erro inesperado. Tente novamente.'),
-          ),
-        );
-        print('Erro genérico ao registrar: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ocorreu um erro inesperado. Tente novamente.'),
+            ),
+          );
+        }
+        print('Erro genérico ao registrar: $e'); // Para depuração
       }
     }
   }
 
   @override
   void dispose() {
-    // Libera os controladores para evitar vazamento de memória
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
-    _phoneController
-        .dispose(); // Não se esqueça de dar dispose no novo controlador
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -104,7 +117,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Form(
-          key: _formKey, // Associa o GlobalKey<FormState> ao formulário
+          key: _formKey,
           child: Column(
             children: [
               TextFormField(
@@ -150,7 +163,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock),
                 ),
-                obscureText: true, // Esconde o texto da senha
+                obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, insira sua senha.';
@@ -163,7 +176,6 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
               ),
               const SizedBox(height: 15),
 
-              // Novo campo de telefone
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
@@ -172,16 +184,11 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.phone),
                 ),
-                keyboardType:
-                    TextInputType.phone, // Define o teclado para telefone
+                keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, insira seu telefone.';
                   }
-                  // Opcional: Regex para validação mais robusta de telefone
-                  // if (!RegExp(r'^\(\d{2}\)\s\d{4,5}-\d{4}$').hasMatch(value)) {
-                  //   return 'Formato de telefone inválido.';
-                  // }
                   return null;
                 },
               ),
@@ -198,7 +205,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  backgroundColor: Colors.purple, // Adapte a cor ao seu tema
+                  backgroundColor: Colors.purple,
                   foregroundColor: Colors.white,
                 ),
               ),

@@ -276,8 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      const DisponibilidadeProfissionalScreen(),
+                                  builder: (context) => AvailabilityScreen(),
                                 ),
                               );
                               ScaffoldMessenger.of(context).showSnackBar(

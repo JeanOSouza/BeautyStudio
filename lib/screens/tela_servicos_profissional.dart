@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart'; // Adicione este import para Firebase Storage
 import 'tela_adcao_servico.dart'; // Provavelmente sua ServiceFormScreen
 import 'package:beautystudio/cores/cores.dart'; // cores
-import 'disponibilidade_servico.dart'; //
+import 'disponibilidade_servico.dart';
 import 'perfil.dart';
+import 'package:beautystudio/models/service.dart'; // <--- IMPORTE SEU MODELO DE SERVIÇO AQUI
 
 class ListaServicosScreen extends StatefulWidget {
   const ListaServicosScreen({super.key});
@@ -19,16 +21,12 @@ class _ListaServicosScreenState extends State<ListaServicosScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // Ícone de menu (três barras) para abrir o Drawer
         leading: Builder(
           builder: (BuildContext context) {
             return IconButton(
-              icon: const Icon(
-                Icons.menu,
-                color: Colors.white,
-              ), // Ícone do menu
+              icon: const Icon(Icons.menu, color: Colors.white),
               onPressed: () {
-                Scaffold.of(context).openDrawer(); // Abre o Drawer
+                Scaffold.of(context).openDrawer();
               },
             );
           },
@@ -36,77 +34,36 @@ class _ListaServicosScreenState extends State<ListaServicosScreen> {
         title: const Text(
           'Meus Serviços',
           style: TextStyle(color: Colors.white),
-        ), // Texto do título
-        backgroundColor: AppColors.roxoEscuro, // Cor de fundo roxa
+        ),
+        backgroundColor: AppColors.roxoEscuro,
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.calendar_today,
-              color: Colors.white,
-            ), // Ícone do calendário
+            icon: const Icon(Icons.calendar_today, color: Colors.white),
             tooltip: 'Definir Disponibilidade',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      const DisponibilidadeProfissionalScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => AvailabilityScreen()),
               );
             },
           ),
-          // Botão de perfil (substituído pelo Drawer, mas mantido aqui para referência se precisar de mais ações na AppBar)
-          // PopupMenuButton<String>(
-          //   icon: const Icon(Icons.person, color: Colors.white),
-          //   onSelected: (value) {
-          //     if (value == 'perfil') {
-          //       // TODO: Navegar para tela de perfil
-          //     } else if (value == 'disponibilidade') {
-          //       Navigator.push(
-          //         context,
-          //         MaterialPageRoute(
-          //           builder: (context) => const DisponibilidadeProfissionalScreen(),
-          //         ),
-          //       );
-          //     } else if (value == 'sair') {
-          //       // TODO: Lógica de logout
-          //     }
-          //   },
-          //   itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-          //     const PopupMenuItem<String>(
-          //       value: 'perfil',
-          //       child: Text('Editar Perfil'),
-          //     ),
-          //     const PopupMenuItem<String>(
-          //       value: 'disponibilidade',
-          //       child: Text('Definir Disponibilidade'),
-          //     ),
-          //     const PopupMenuItem<String>(value: 'sair', child: Text('Sair')),
-          //   ],
-          // ),
         ],
       ),
-      // --- DRAWER ---
       drawer: Drawer(
         child: ListView(
-          padding: EdgeInsets.zero, // Remove padding extra do ListView
+          padding: EdgeInsets.zero,
           children: <Widget>[
-            // Cabeçalho do Drawer
             DrawerHeader(
-              decoration: BoxDecoration(
-                color: AppColors.roxoEscuro, // Cor roxa para o cabeçalho
-              ),
+              decoration: BoxDecoration(color: AppColors.roxoEscuro),
               child: const Text(
                 'Menu',
                 style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
-            // Opção "Perfil"
             ListTile(
               leading: const Icon(Icons.account_circle),
               title: const Text('Perfil'),
               onTap: () {
-                // TODO: Navegar para a tela de perfil
                 Navigator.pop(context);
                 Navigator.push(
                   context,
@@ -116,25 +73,23 @@ class _ListaServicosScreenState extends State<ListaServicosScreen> {
                 );
               },
             ),
-            // Opção "Cadastro de Serviço"
             ListTile(
               leading: const Icon(Icons.add_business),
               title: const Text('Cadastro de Serviço'),
               onTap: () {
-                Navigator.pop(context); // Fecha o drawer
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const ServiceFormScreen(),
-                  ), // Navega para a tela de cadastro
+                    builder: (context) =>
+                        const ServiceFormScreen(), // Para adicionar um novo serviço
+                  ),
                 );
               },
             ),
-            // Adicione mais opções de menu aqui, se necessário
           ],
         ),
       ),
-      // --- FIM DO NOVO ELEMENTO: DRAWER ---
       body: StreamBuilder<QuerySnapshot>(
         stream: servicosRef.snapshots(),
         builder: (context, snapshot) {
@@ -154,39 +109,65 @@ class _ListaServicosScreenState extends State<ListaServicosScreen> {
           return ListView.builder(
             itemCount: servicos.length,
             itemBuilder: (context, index) {
-              final servico = servicos[index];
-              final data = servico.data() as Map<String, dynamic>;
+              final servicoDoc = servicos[index]; // DocumentSnapshot
+              // Converta o DocumentSnapshot para o seu modelo Service
+              final service = Service.fromFirestore(
+                servicoDoc,
+              ); // <--- Use o construtor factory
 
               return Card(
                 margin: const EdgeInsets.all(8),
                 child: ListTile(
-                  leading: data['images'] != null && data['images'].isNotEmpty
+                  leading: service.images.isNotEmpty
                       ? Image.network(
-                          data['images'][0],
+                          service.images[0],
                           width: 60,
                           fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.broken_image,
+                              ), // Fallback para erro
                         )
                       : const Icon(Icons.image),
-                  title: Text(
-                    data['serviceName'] ?? 'Sem nome',
-                  ), // Correção para 'serviceName'
-                  subtitle: Text(data['description'] ?? ''),
+                  title: Text(service.serviceName),
+                  subtitle: Text(
+                    'R\$ ${service.value.toStringAsFixed(2)}\n${service.description}',
+                  ), // Exibe o valor e a descrição
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.blue),
                         onPressed: () {
-                          // Navegue para tela de edição aqui
+                          // <--- LÓGICA DE NAVEGAÇÃO PARA EDIÇÃO
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ServiceFormScreen(
+                                service: service,
+                              ), // PASSA O OBJETO SERVICE
+                            ),
+                          ).then((_) {
+                            // Opcional: Atualiza a tela após voltar da edição, se necessário
+                            // (StreamBuilder já lida com a maioria das atualizações)
+                          });
                         },
                       ),
                       IconButton(
                         icon: const Icon(
                           Icons.delete,
-                          color: Color.fromARGB(255, 67, 11, 77),
+                          color: Color.fromARGB(
+                            255,
+                            67,
+                            11,
+                            77,
+                          ), // A cor original era roxa escura, não vermelha
                         ),
                         onPressed: () {
-                          _confirmarExclusao(context, servico.id);
+                          _confirmarExclusao(
+                            context,
+                            service,
+                          ); // Passa o objeto Service completo
                         },
                       ),
                     ],
@@ -197,30 +178,32 @@ class _ListaServicosScreenState extends State<ListaServicosScreen> {
           );
         },
       ),
-      // --- NOVO ELEMENTO: FLOATING ACTION BUTTON ---
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const ServiceFormScreen(),
-            ), // Navega para a tela de cadastro de serviço
+              builder: (context) =>
+                  const ServiceFormScreen(), // Para adicionar um novo serviço
+            ),
           );
         },
-        backgroundColor: Colors.purple, // Cor do FAB
-        tooltip: 'Cadastrar novo serviço', // Dica ao passar o mouse/segurar
-        child: const Icon(Icons.add, color: Colors.white), // Ícone de adição
+        backgroundColor: Colors.purple,
+        tooltip: 'Cadastrar novo serviço',
+        child: const Icon(Icons.add, color: Colors.white),
       ),
-      // --- FIM DO NOVO ELEMENTO: FLOATING ACTION BUTTON ---
     );
   }
 
-  void _confirmarExclusao(BuildContext context, String id) {
+  // Modificada para receber o objeto Service completo
+  void _confirmarExclusao(BuildContext context, Service service) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Excluir Serviço'),
-        content: const Text('Tem certeza que deseja excluir este serviço?'),
+        content: Text(
+          'Tem certeza que deseja excluir "${service.serviceName}"?',
+        ),
         actions: [
           TextButton(
             child: const Text('Cancelar'),
@@ -229,11 +212,42 @@ class _ListaServicosScreenState extends State<ListaServicosScreen> {
           TextButton(
             child: const Text('Excluir'),
             onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection('services') // 'services' em vez de 'servicos'
-                  .doc(id)
-                  .delete();
-              Navigator.pop(context);
+              Navigator.pop(context); // Fecha o diálogo primeiro
+
+              try {
+                // 1. Excluir o documento do Firestore
+                await FirebaseFirestore.instance
+                    .collection('services')
+                    .doc(service.id) // Usa o ID do serviço
+                    .delete();
+
+                // 2. Excluir as imagens associadas do Firebase Storage (melhor prática)
+                if (service.images.isNotEmpty) {
+                  for (String imageUrl in service.images) {
+                    try {
+                      await FirebaseStorage.instance
+                          .refFromURL(imageUrl)
+                          .delete();
+                      print('Imagem $imageUrl excluída do Storage.');
+                    } catch (e) {
+                      print('Erro ao excluir imagem $imageUrl do Storage: $e');
+                      // Continua mesmo se uma imagem falhar, para tentar excluir as outras
+                    }
+                  }
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Serviço "${service.serviceName}" e imagens associadas excluídos com sucesso!',
+                    ),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Erro ao excluir serviço: $e')),
+                );
+              }
             },
           ),
         ],

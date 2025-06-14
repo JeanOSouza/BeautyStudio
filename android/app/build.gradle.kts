@@ -1,3 +1,9 @@
+dependencies {
+    // Corrected Kotlin DSL syntax: use parentheses and double quotes
+    implementation(platform("com.google.firebase:firebase-bom:32.7.4")) // Use double quotes inside platform()
+    implementation("com.google.firebase:firebase-auth") // Use parentheses and double quotes
+    implementation("com.google.firebase:firebase-firestore") // Use parentheses and double quotes
+}
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -25,7 +31,7 @@ android {
         applicationId = "com.example.beautystudio"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

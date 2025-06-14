@@ -36,9 +36,10 @@ dependencies:
   firebase_storage: ^12.4.6
   firebase_storage_web: ^3.6.22
   js: ^0.7.2   
-  image_picker: ^1.1.2        # versão atualizada
+  image_picker: ^1.1.2      
   cupertino_icons: ^1.0.8
   intl: ^0.20.2
+  table_calendar: ^3.0.9
 
 dev_dependencies:
   flutter_test:
@@ -49,7 +50,7 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "BeautyStudio/lib/img/Logo.png"
+  image_path: "beautystudio/lib/img/Logo.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.
