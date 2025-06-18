@@ -66,7 +66,7 @@ Dart.
 
 ## 📱 Compatibilidade
 
-- Android
+- Android 
 
 ---
 
